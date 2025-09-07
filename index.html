@@ -1,0 +1,578 @@
+<meta name='viewport' content='width=device-width, initial-scale=1'/><!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Peminjaman Barang</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
+
+    <!-- Header -->
+    <header class="bg-white shadow-lg border-b-4 border-blue-500">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center py-6">
+                <div class="flex items-center">
+                    <div class="bg-blue-500 p-3 rounded-lg mr-4">
+                        <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+                        </svg>
+                    </div>
+                    <div>
+                        <h1 class="text-3xl font-bold text-gray-900">Sistem Peminjaman</h1>
+                        <p class="text-gray-600">Kelola peminjaman barang dengan mudah</p>
+                    </div>
+                </div>
+                <div class="flex space-x-4">
+                    <button onclick="showSection('catalog')" id="catalogBtn" class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-lg font-medium transition-colors">
+                        Katalog Barang
+                    </button>
+                    <button onclick="showSection('loans')" id="loansBtn" class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-6 py-3 rounded-lg font-medium transition-colors">
+                        Peminjaman Aktif
+                    </button>
+                    <button onclick="showSection('manage')" id="manageBtn" class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-6 py-3 rounded-lg font-medium transition-colors">
+                        Kelola Barang
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+        <!-- Katalog Barang -->
+        <div id="catalogSection" class="section">
+            <h2 class="text-2xl font-bold text-gray-900 mb-6">Katalog Barang</h2>
+            <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
+                <div class="flex flex-col md:flex-row gap-4">
+                    <input type="text" id="searchInput" placeholder="Cari nama barang..." class="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 flex-1">
+                    <select id="categoryFilter" class="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 w-48">
+                        <option value="">Semua Kategori</option>
+                        <option value="Multimedia">Multimedia</option>
+                        <option value="Sound System">Sound System</option>
+                        <option value="Umum">Umum</option>
+                    </select>
+                    <select id="ownerFilter" class="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 w-48">
+                        <option value="">Semua Pemilik</option>
+                        <option value="Panin">Panin</option>
+                        <option value="BMPD">BMPD</option>
+                    </select>
+                    <button onclick="clearFilters()" class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-6 py-3 rounded-lg font-medium">
+                        Reset
+                    </button>
+                </div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="itemsGrid"></div>
+            <div id="noResults" class="text-center py-12 hidden">
+                <svg class="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                </svg>
+                <h3 class="text-lg font-medium text-gray-900 mb-2">Tidak Ada Hasil</h3>
+                <p class="text-gray-600">Tidak ditemukan barang yang sesuai.</p>
+            </div>
+        </div>
+
+        <!-- Peminjaman Aktif -->
+        <div id="loansSection" class="section hidden">
+            <h2 class="text-2xl font-bold text-gray-900 mb-6">Peminjaman Aktif</h2>
+            <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
+                <div class="flex justify-between">
+                    <button onclick="resetAllLoans()" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded text-sm flex items-center space-x-1">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                        </svg>
+                        <span>Reset Semua</span>
+                    </button>
+                    <button onclick="openPrintModal()" class="bg-purple-500 hover:bg-purple-600 text-white px-6 py-2 rounded-lg font-medium flex items-center space-x-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path>
+                        </svg>
+                        <span>Cetak Laporan</span>
+                    </button>
+                </div>
+            </div>
+            <div id="activeLoans" class="space-y-4"></div>
+        </div>
+
+        <!-- Kelola Barang -->
+        <div id="manageSection" class="section hidden">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-gray-900">Kelola Barang</h2>
+                <button onclick="openItemModal()" class="bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-lg font-medium flex items-center space-x-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                    </svg>
+                    <span>Tambah Barang</span>
+                </button>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="manageItemsGrid"></div>
+        </div>
+
+    </main>
+
+    <!-- Modal Peminjaman -->
+    <div id="loanModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+        <div class="bg-white rounded-xl shadow-2xl max-w-md w-full mx-4 p-6">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-xl font-bold text-gray-900">Pinjam Barang</h3>
+                <button onclick="closeLoanModal()" class="text-gray-400 hover:text-gray-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            <div id="loanItemDetail" class="mb-4 p-3 bg-gray-50 rounded-lg"></div>
+            <form id="loanForm" class="space-y-4">
+                <input type="hidden" id="loanItemId">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Jumlah</label>
+                    <input type="number" id="loanQuantity" min="1" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                    <p id="availableInfo" class="text-sm text-gray-600 mt-1"></p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Tanggal Pinjam</label>
+                    <input type="date" id="loanDate" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Tanggal Kembali</label>
+                    <input type="date" id="returnDate" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div class="flex space-x-4 pt-4">
+                    <button type="button" onclick="closeLoanModal()" class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 py-3 rounded-lg font-medium">
+                        Batal
+                    </button>
+                    <button type="submit" class="flex-1 bg-blue-500 hover:bg-blue-600 text-white py-3 rounded-lg font-medium">
+                        Simpan Peminjaman
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Cetak Laporan -->
+    <div id="printModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+        <div class="bg-white rounded-xl shadow-2xl max-w-lg w-full mx-4 p-6 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-xl font-bold text-gray-900">Cetak Laporan Peminjaman</h3>
+                <button onclick="closePrintModal()" class="text-gray-400 hover:text-gray-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            <form id="printForm" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Nama Peminjam</label>
+                    <input type="text" id="printBorrowerName" required class="w-full px-4 py-3 border border-gray-300 rounded-lg">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Keperluan</label>
+                    <textarea id="printPurpose" rows="3" class="w-full px-4 py-3 border border-gray-300 rounded-lg" placeholder="Jelaskan keperluan peminjaman..."></textarea>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Pemeriksa</label>
+                        <input type="text" id="printExaminer" required class="w-full px-4 py-3 border border-gray-300 rounded-lg">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Penanggung Jawab</label>
+                        <input type="text" id="printResponsible" required class="w-full px-4 py-3 border border-gray-300 rounded-lg">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Disetujui Oleh</label>
+                    <input type="text" id="printApprover" required class="w-full px-4 py-3 border border-gray-300 rounded-lg">
+                </div>
+                <div class="flex space-x-4 pt-4">
+                    <button type="button" onclick="closePrintModal()" class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 py-3 rounded-lg font-medium">
+                        Batal
+                    </button>
+                    <button type="submit" class="flex-1 bg-purple-500 hover:bg-purple-600 text-white py-3 rounded-lg font-medium">
+                        Cetak
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Tambah/Edit Barang -->
+    <div id="itemModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+        <div class="bg-white rounded-xl shadow-2xl max-w-md w-full mx-4 p-6">
+            <div class="flex justify-between items-center mb-6">
+                <h3 id="modalTitle" class="text-xl font-bold text-gray-900">Tambah Barang</h3>
+                <button onclick="closeItemModal()" class="text-gray-400 hover:text-gray-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            <form id="itemForm" class="space-y-4">
+                <input type="hidden" id="itemId">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Nama Barang</label>
+                    <input type="text" id="itemName" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Kategori</label>
+                    <select id="itemCategory" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                        <option value="Multimedia">Multimedia</option>
+                        <option value="Sound System">Sound System</option>
+                        <option value="Umum">Umum</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Pemilik</label>
+                    <select id="itemOwner" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                        <option value="Panin">Panin</option>
+                        <option value="BMPD">BMPD</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Jumlah Total</label>
+                    <input type="number" id="itemTotal" min="1" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Tersedia</label>
+                    <input type="number" id="itemAvailable" min="0" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Gambar (URL)</label>
+                    <input type="url" id="itemImage" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="https://via.placeholder.com/150">
+                </div>
+                <div class="flex space-x-4 pt-4">
+                    <button type="button" onclick="closeItemModal()" class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 py-3 rounded-lg font-medium">
+                        Batal
+                    </button>
+                    <button type="submit" class="flex-1 bg-green-500 hover:bg-green-600 text-white py-3 rounded-lg font-medium">
+                        Simpan
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Inisialisasi Supabase - PROYEK BARU
+        const SUPABASE_URL = 'https://hswvwytupplmwrdvhmdj.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhzd3Z3eXR1cHBsbXdyZHZobWRqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mjg1MjY4NTcsImV4cCI6MjA0NDEwMjg1N30.59Z284jKo2W6983133504132273033186323652365236523652365'; // Ganti dengan anon key kamu
+
+        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        let items = [];
+        let loans = [];
+
+        // Ambil data barang
+        async function fetchItems() {
+            const { data, error } = await supabase.from('items').select('*');
+            if (error) {
+                console.error('Gagal ambil barang:', error);
+                alert('Gagal terhubung ke database. Cek koneksi Supabase.');
+            } else {
+                items = data;
+                displayCatalogItems();
+                displayManageItems();
+            }
+        }
+
+        // Ambil data peminjaman aktif
+        async function fetchLoans() {
+            const { data, error } = await supabase.from('loans').select('*').eq('status', 'aktif');
+            if (error) console.error('Gagal ambil peminjaman:', error);
+            else loans = data;
+            displayLoans();
+        }
+
+        // Simpan atau update barang
+        async function saveItem() {
+            const id = document.getElementById('itemId').value;
+            const item = {
+                name: document.getElementById('itemName').value,
+                category: document.getElementById('itemCategory').value,
+                owner: document.getElementById('itemOwner').value,
+                total: parseInt(document.getElementById('itemTotal').value),
+                available: parseInt(document.getElementById('itemAvailable').value),
+                image: document.getElementById('itemImage').value || 'https://via.placeholder.com/150?text=Barang'
+            };
+            if (id) item.id = parseInt(id);
+
+            const { error } = await supabase.from('items').upsert(item);
+            if (!error) closeItemModal();
+            fetchItems();
+        }
+
+        // Hapus barang
+        async function deleteItem(id) {
+            if (confirm('Hapus barang ini?')) {
+                const { error } = await supabase.from('items').delete().eq('id', id);
+                if (!error) fetchItems();
+            }
+        }
+
+        // Buka modal pinjam
+        function openLoanModal(itemId) {
+            const item = items.find(i => i.id === itemId);
+            if (!item || item.available <= 0) return;
+
+            document.getElementById('loanItemId').value = item.id;
+            document.getElementById('loanItemDetail').innerHTML = `
+                <strong>${item.name}</strong><br>
+                Tersedia: ${item.available} unit
+            `;
+            document.getElementById('loanQuantity').max = item.available;
+            document.getElementById('availableInfo').textContent = `Maks: ${item.available}`;
+            document.getElementById('loanQuantity').value = 1;
+            document.getElementById('loanDate').valueAsDate = new Date();
+            document.getElementById('returnDate').valueAsDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // +7 hari
+
+            document.getElementById('loanModal').classList.remove('hidden');
+        }
+
+        // Simpan peminjaman
+        async function saveLoan() {
+            const itemId = document.getElementById('loanItemId').value;
+            const quantity = parseInt(document.getElementById('loanQuantity').value);
+            const item = items.find(i => i.id === parseInt(itemId));
+
+            const loan = {
+                item_id: parseInt(itemId),
+                item_name: item.name,
+                borrower_name: document.getElementById('printBorrowerName').value || 'Tidak diketahui',
+                quantity,
+                loan_date: document.getElementById('loanDate').value,
+                return_date: document.getElementById('returnDate').value,
+                purpose: document.getElementById('printPurpose').value,
+                examiner: document.getElementById('printExaminer').value,
+                responsible: document.getElementById('printResponsible').value,
+                approver: document.getElementById('printApprover').value,
+                status: 'aktif'
+            };
+
+            const { error } = await supabase.from('loans').insert([loan]);
+            if (error) {
+                alert('Gagal menyimpan peminjaman');
+                return;
+            }
+
+            // Kurangi stok
+            item.available -= quantity;
+            await supabase.from('items').update({ available: item.available }).eq('id', itemId);
+
+            closeLoanModal();
+            fetchItems();
+            fetchLoans();
+        }
+
+        // Tampilkan peminjaman aktif
+        function displayLoans() {
+            const container = document.getElementById('activeLoans');
+            container.innerHTML = loans.length === 0 ?
+                '<p class="text-gray-500">Tidak ada peminjaman aktif.</p>' :
+                loans.map(l => `
+                    <div class="bg-white p-4 rounded-lg shadow">
+                        <div class="font-bold">${l.item_name}</div>
+                        <div class="text-sm text-gray-600">Peminjam: ${l.borrower_name} • Jumlah: ${l.quantity}</div>
+                        <div class="text-sm text-gray-500">Tgl: ${l.loan_date} → ${l.return_date}</div>
+                    </div>
+                `).join('');
+        }
+
+        // Reset semua peminjaman (pengembalian massal)
+        async function resetAllLoans() {
+            if (confirm('Reset semua peminjaman? Ini akan mengembalikan semua barang.')) {
+                for (let loan of loans) {
+                    const item = items.find(i => i.id === loan.item_id);
+                    if (item) {
+                        item.available += loan.quantity;
+                        await supabase.from('items').update({ available: item.available }).eq('id', item.id);
+                    }
+                }
+                await supabase.from('loans').update({ status: 'selesai' }).eq('status', 'aktif');
+                fetchItems();
+                fetchLoans();
+            }
+        }
+
+        // Cetak laporan langsung
+        function printLoanReport() {
+            const borrower = document.getElementById('printBorrowerName').value;
+            const purpose = document.getElementById('printPurpose').value;
+            const examiner = document.getElementById('printExaminer').value;
+            const responsible = document.getElementById('printResponsible').value;
+            const approver = document.getElementById('printApprover').value;
+
+            const printContent = `
+                <div class="p-8 max-w-4xl mx-auto bg-white">
+                    <h2 class="text-3xl font-bold mb-6 text-center">LAPORAN PEMINJAMAN BARANG</h2>
+                    <p class="text-lg mb-4"><strong>Tanggal:</strong> ${new Date().toLocaleDateString('id-ID')}</p>
+                    <table class="w-full mb-6 text-left border border-gray-300">
+                        <tr class="border-b"><td class="py-2 px-4 font-medium">Nama Peminjam</td><td class="py-2 px-4">${borrower}</td></tr>
+                        <tr class="border-b"><td class="py-2 px-4 font-medium">Keperluan</td><td class="py-2 px-4">${purpose || '-'}</td></tr>
+                        <tr class="border-b"><td class="py-2 px-4 font-medium">Pemeriksa</td><td class="py-2 px-4">${examiner}</td></tr>
+                        <tr class="border-b"><td class="py-2 px-4 font-medium">Penanggung Jawab</td><td class="py-2 px-4">${responsible}</td></tr>
+                        <tr class="border-b"><td class="py-2 px-4 font-medium">Disetujui Oleh</td><td class="py-2 px-4">${approver}</td></tr>
+                    </table>
+                    <h3 class="text-xl font-semibold mb-3">Daftar Barang yang Dipinjam</h3>
+                    <table class="w-full border-collapse border border-gray-400">
+                        <thead><tr class="bg-gray-100"><th class="border border-gray-400 px-4 py-2">No</th><th class="border border-gray-400 px-4 py-2">Barang</th><th class="border border-gray-400 px-4 py-2">Jumlah</th></tr></thead>
+                        <tbody>
+                            ${loans.map((l, i) => `
+                                <tr><td class="border border-gray-400 px-4 py-2 text-center">${i+1}</td><td class="border border-gray-400 px-4 py-2">${l.item_name}</td><td class="border border-gray-400 px-4 py-2 text-center">${l.quantity}</td></tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                    <div class="mt-12 grid grid-cols-2 gap-8">
+                        <div class="text-center"><p>Pemeriksa,</p><p class="mt-8">(${examiner})</p></div>
+                        <div class="text-center"><p>Disetujui Oleh,</p><p class="mt-8">(${approver})</p></div>
+                    </div>
+                </div>
+            `;
+
+            const printWindow = window.open('', '', 'width=800,height=1000');
+            printWindow.document.write(`
+                <html>
+                    <head>
+                        <title>Laporan Peminjaman</title>
+                        <script src="https://cdn.tailwindcss.com"></script>
+                    </head>
+                    <body onload="window.print();">${printContent}</body>
+                </html>
+            `);
+            printWindow.document.close();
+        }
+
+        // Tampilkan barang di katalog
+        function displayCatalogItems() {
+            const container = document.getElementById('itemsGrid');
+            container.innerHTML = '';
+
+            const query = document.getElementById('searchInput').value.toLowerCase();
+            const category = document.getElementById('categoryFilter').value;
+            const owner = document.getElementById('ownerFilter').value;
+
+            const filtered = items.filter(item =>
+                item.name.toLowerCase().includes(query) &&
+                (category === '' || item.category === category) &&
+                (owner === '' || item.owner === owner)
+            );
+
+            if (filtered.length === 0) {
+                document.getElementById('noResults').classList.remove('hidden');
+                return;
+            }
+            document.getElementById('noResults').classList.add('hidden');
+
+            filtered.forEach(item => {
+                const isAvailable = item.available > 0;
+                const div = document.createElement('div');
+                div.className = 'bg-white rounded-lg shadow-md overflow-hidden';
+                div.innerHTML = `
+                    <img src="${item.image}" alt="${item.name}" class="w-full h-32 object-cover">
+                    <div class="p-4">
+                        <h3 class="font-bold text-gray-900">${item.name}</h3>
+                        <p class="text-sm text-gray-600">${item.category} • ${item.owner}</p>
+                        <p class="text-sm">Tersedia: ${item.available} / ${item.total}</p>
+                        <button onclick="openLoanModal(${item.id})" class="mt-3 w-full ${isAvailable ? 'bg-blue-500 hover:bg-blue-600' : 'bg-gray-300 cursor-not-allowed'} text-white py-2 rounded-lg">
+                            ${isAvailable ? 'Pinjam' : 'Habis'}
+                        </button>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        // Tampilkan barang di halaman kelola
+        function displayManageItems() {
+            const container = document.getElementById('manageItemsGrid');
+            container.innerHTML = '';
+            items.forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'bg-white rounded-lg shadow-md overflow-hidden';
+                div.innerHTML = `
+                    <img src="${item.image}" alt="${item.name}" class="w-full h-32 object-cover">
+                    <div class="p-4">
+                        <h3 class="font-bold text-gray-900">${item.name}</h3>
+                        <p class="text-sm text-gray-600">${item.category} • ${item.owner}</p>
+                        <p class="text-sm">Tersedia: ${item.available} / ${item.total}</p>
+                        <div class="mt-4 flex space-x-2">
+                            <button onclick="editItem(${item.id})" class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-sm">Edit</button>
+                            <button onclick="deleteItem(${item.id})" class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm">Hapus</button>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        // Edit barang
+        function editItem(id) {
+            const item = items.find(i => i.id === id);
+            if (!item) return;
+
+            document.getElementById('itemId').value = item.id;
+            document.getElementById('itemName').value = item.name;
+            document.getElementById('itemCategory').value = item.category;
+            document.getElementById('itemOwner').value = item.owner;
+            document.getElementById('itemTotal').value = item.total;
+            document.getElementById('itemAvailable').value = item.available;
+            document.getElementById('itemImage').value = item.image;
+            document.getElementById('modalTitle').textContent = 'Edit Barang';
+
+            openItemModal();
+        }
+
+        // Fungsi modal
+        function openItemModal() { document.getElementById('itemModal').classList.remove('hidden'); }
+        function closeItemModal() {
+            document.getElementById('itemModal').classList.add('hidden');
+            document.getElementById('itemForm').reset();
+            document.getElementById('itemId').value = '';
+            document.getElementById('modalTitle').textContent = 'Tambah Barang';
+        }
+        function closeLoanModal() { document.getElementById('loanModal').classList.add('hidden'); }
+        function openPrintModal() { document.getElementById('printModal').classList.remove('hidden'); }
+        function closePrintModal() { document.getElementById('printModal').classList.add('hidden'); }
+
+        // Filter
+        function clearFilters() {
+            document.getElementById('searchInput').value = '';
+            document.getElementById('categoryFilter').value = '';
+            document.getElementById('ownerFilter').value = '';
+            displayCatalogItems();
+        }
+
+        // Tab navigation
+        function showSection(section) {
+            document.querySelectorAll('.section').forEach(s => s.classList.add('hidden'));
+            document.getElementById(`${section}Section`).classList.remove('hidden');
+
+            document.querySelectorAll('button[id$="Btn"]').forEach(btn => {
+                btn.classList.replace('bg-blue-500', 'bg-gray-200');
+                btn.classList.replace('text-white', 'text-gray-700');
+            });
+            document.getElementById(`${section}Btn`).classList.replace('bg-gray-200', 'bg-blue-500');
+            document.getElementById(`${section}Btn`).classList.replace('text-gray-700', 'text-white');
+        }
+
+        // Event Listeners
+        document.getElementById('itemForm').addEventListener('submit', e => { e.preventDefault(); saveItem(); });
+        document.getElementById('loanForm').addEventListener('submit', e => { e.preventDefault(); saveLoan(); });
+        document.getElementById('printForm').addEventListener('submit', e => { e.preventDefault(); printLoanReport(); closePrintModal(); });
+
+        document.getElementById('searchInput').addEventListener('input', displayCatalogItems);
+        document.getElementById('categoryFilter').addEventListener('change', displayCatalogItems);
+        document.getElementById('ownerFilter').addEventListener('change', displayCatalogItems);
+
+        // Load data saat halaman dimuat
+        document.addEventListener('DOMContentLoaded', () => {
+            fetchItems();
+            fetchLoans();
+            showSection('catalog');
+        });
+    </script>
+</body>
+</html>
